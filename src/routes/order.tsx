@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Sparkles, RefreshCw, Upload, Send } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, Upload, Send, Maximize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +54,7 @@ function OrderPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState<OrderDraft>(DEFAULT);
   const [variation, setVariation] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     const d = loadDraft();
@@ -203,11 +204,35 @@ function OrderPage() {
             )}
           </div>
           {form.aiPreviewHtml && (
-            <div className="overflow-hidden rounded-xl border border-border">
+            <div className="relative overflow-hidden rounded-xl border border-border">
               <iframe title="AI namuna" srcDoc={form.aiPreviewHtml} className="h-[460px] w-full bg-white" sandbox="allow-scripts" />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setFullscreen(true)}
+                className="absolute right-3 top-3 shadow-elegant"
+              >
+                <Maximize2 className="mr-1 h-4 w-4" /> To'liq ekran
+              </Button>
             </div>
           )}
         </Card>
+
+        {fullscreen && form.aiPreviewHtml && (
+          <div className="fixed inset-0 z-50 bg-background">
+            <iframe title="AI namuna to'liq" srcDoc={form.aiPreviewHtml} className="h-full w-full bg-white" sandbox="allow-scripts" />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setFullscreen(false)}
+              className="absolute right-4 top-4 shadow-elegant"
+            >
+              <X className="mr-1 h-4 w-4" /> Yopish
+            </Button>
+          </div>
+        )}
 
         {/* Extras */}
         <Card title="Qo'shimcha imkoniyatlar">
