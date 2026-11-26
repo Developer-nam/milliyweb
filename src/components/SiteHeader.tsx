@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { ShoppingCart, User as UserIcon, Shield, LogOut, ListChecks, Menu } from "lucide-react";
+import { ShoppingCart, User as UserIcon, Shield, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
-import { NotificationsBell } from "./NotificationsBell";
 import logo from "@/assets/logo.png";
 import { useState } from "react";
 
@@ -46,15 +45,6 @@ export function SiteHeader() {
       <button onClick={() => goHash("sites")} className="text-sm font-medium text-muted-foreground hover:text-foreground">
         Bizning Saytlar
       </button>
-      {user && (
-        <Link
-          to="/my-orders"
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          onClick={() => setOpen(false)}
-        >
-          Mening Buyurtmalarim
-        </Link>
-      )}
       {isAdmin && (
         <Link
           to="/admin"
@@ -78,13 +68,12 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-6 md:flex">{navLinks}</nav>
 
         <div className="flex items-center gap-1">
-          {user && <NotificationsBell />}
           <Link to="/cart">
             <Button variant="ghost" size="icon">
               <ShoppingCart className="h-5 w-5" />
             </Button>
           </Link>
-          {user ? (
+          {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -92,31 +81,18 @@ export function SiteHeader() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="truncate">{profile?.full_name || "Profil"}</DropdownMenuLabel>
+                <DropdownMenuLabel className="truncate">{profile?.full_name || "Admin"}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
-                  <UserIcon className="mr-2 h-4 w-4" /> Profilni tahrirlash
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate({ to: "/my-orders" })}>
-                  <ListChecks className="mr-2 h-4 w-4" /> Buyurtmalarim
-                </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
                     <Shield className="mr-2 h-4 w-4" /> Admin Panel
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" /> Chiqish
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Link to="/auth">
-              <Button size="sm" className="bg-gradient-primary text-primary-foreground">
-                Kirish
-              </Button>
-            </Link>
           )}
           <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild className="md:hidden">

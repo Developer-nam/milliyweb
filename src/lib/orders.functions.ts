@@ -27,10 +27,9 @@ const OrderInput = z.object({
 });
 
 export const submitOrder = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => OrderInput.parse(d))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+  .handler(async ({ data }) => {
+    const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
     const price = computePrice(data.deadlineDays, data.tariff);
     const dl = getDeadlineOption(data.deadlineDays);
     const tariff = getTariff(data.tariff);
@@ -49,7 +48,7 @@ export const submitOrder = createServerFn({ method: "POST" })
     const { data: inserted, error } = await supabase
       .from("orders")
       .insert({
-        user_id: userId,
+        user_id: null,
         site_name: data.siteName,
         domain_name: data.domainName || null,
         domain_ext: data.domainExt || null,
@@ -75,12 +74,6 @@ export const submitOrder = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      order_id: inserted.id,
-      title: "Buyurtmangiz qabul qilindi",
-      body: `"${data.siteName}" bo'yicha buyurtma yaratildi. Muddat: ${dl.label}.`,
-    });
 
     const extrasLines: string[] = [];
     if (data.extras.telegramBot) extrasLines.push(`Telegram bot: ${data.extras.telegramValue || "ha"}`);
@@ -168,4 +161,18 @@ export const checkMyReminders = createServerFn({ method: "POST" })
       }
     }
     return { created };
+  });
+export const uploadOrderFile = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ name: z.string().max(200), type: z.string().max(100), base64: z.string().max(7_000_000) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    if (!data.type.startsWith("image/")) throw new Error("Faqat rasm yuklash mumkin");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Uint8Array.from(atob(data.base64), (c) => c.charCodeAt(0));
+    const path = `guest/${Date.now()}-${crypto.randomUUID()}-${data.name.replace(/[^\w.-]/g, "_")}`;
+    const { error } = await supabaseAdmin.storage.from("uploads").upload(path, bytes, { contentType: data.type });
+    if (error) throw new Error(error.message);
+    const { data: signed } = await supabaseAdmin.storage.from("uploads").createSignedUrl(path, 60 * 60 * 24 * 365);
+    return { url: signed?.signedUrl ?? "" };
   });

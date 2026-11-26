@@ -20,9 +20,7 @@ import { DOMAIN_EXTENSIONS } from "@/lib/domains";
 import { DEADLINE_OPTIONS, TARIFFS, computePrice, formatSom } from "@/lib/pricing";
 import { loadDraft, saveDraft, clearDraft, type OrderDraft } from "@/lib/order-draft";
 import { generateSitePreview } from "@/lib/ai.functions";
-import { submitOrder } from "@/lib/orders.functions";
-import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { submitOrder, uploadOrderFile } from "@/lib/orders.functions";
 
 export const Route = createFileRoute("/order")({
   head: () => ({
@@ -50,7 +48,6 @@ const DEFAULT: OrderDraft = {
 };
 
 function OrderPage() {
-  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState<OrderDraft>(DEFAULT);
   const [variation, setVariation] = useState(0);
@@ -60,16 +57,6 @@ function OrderPage() {
     const d = loadDraft();
     setForm((f) => ({ ...f, ...d, extras: { ...f.extras, ...(d.extras ?? {}) } }));
   }, []);
-
-  useEffect(() => {
-    if (user && profile) {
-      setForm((f) => ({
-        ...f,
-        contactName: f.contactName || profile.full_name || "",
-        contactPhone: f.contactPhone || profile.phone || "",
-      }));
-    }
-  }, [user, profile]);
 
   const update = (patch: Partial<OrderDraft>) => {
     setForm((f) => {
@@ -99,19 +86,17 @@ function OrderPage() {
   };
 
   const uploadFile = async (file: File, field: "logoUrl" | "imageUrl") => {
-    if (!user) {
-      toast.error("Fayl yuklash uchun avval akkauntga kiring (yoki URL kiriting)");
-      return;
+    if (file.size > 5_000_000) return toast.error("Fayl 5MB dan oshmasin");
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]!);
+      const res = await uploadOrderFile({ data: { name: file.name, type: file.type, base64: btoa(bin) } });
+      update({ [field]: res.url } as Partial<OrderDraft>);
+      toast.success("Yuklandi");
+    } catch (e) {
+      toast.error((e as Error).message);
     }
-    const path = `${user.id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
-    const { error } = await supabase.storage.from("uploads").upload(path, file, { upsert: true });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const { data } = await supabase.storage.from("uploads").createSignedUrl(path, 60 * 60 * 24 * 365);
-    if (data?.signedUrl) update({ [field]: data.signedUrl } as Partial<OrderDraft>);
-    toast.success("Yuklandi");
   };
 
   const submitMut = useMutation({
@@ -135,7 +120,8 @@ function OrderPage() {
     onSuccess: () => {
       clearDraft();
       toast.success("Buyurtmangiz qabul qilindi!");
-      navigate({ to: "/my-orders" });
+      setForm(DEFAULT);
+      navigate({ to: "/" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -144,12 +130,6 @@ function OrderPage() {
     if (!form.siteName.trim()) return toast.error("Sayt nomini kiriting");
     if (!form.contactName.trim()) return toast.error("Ismingizni kiriting");
     if (!form.contactPhone.trim()) return toast.error("Telefon raqamingizni kiriting");
-    if (!user) {
-      saveDraft(form);
-      toast.message("Buyurtma berish uchun akkauntga kiring");
-      navigate({ to: "/auth", search: { redirect: "/order" } });
-      return;
-    }
     submitMut.mutate();
   };
 

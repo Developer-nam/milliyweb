@@ -102,7 +102,7 @@ export const adminUpdateOrder = createServerFn({ method: "POST" })
     if (data.admin_notes !== undefined) patch.admin_notes = data.admin_notes;
     if (data.admin_prompt !== undefined) patch.admin_prompt = data.admin_prompt;
     const { data: order } = await supabaseAdmin.from("orders").update(patch as never).eq("id", data.id).select().single();
-    if (data.status && order) {
+    if (data.status && order && order.user_id) {
       await supabaseAdmin.from("notifications").insert({
         user_id: order.user_id,
         order_id: order.id,
