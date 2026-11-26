@@ -34,6 +34,7 @@ import {
 } from "@/lib/admin.functions";
 import { getPublicContent } from "@/lib/content.functions";
 import { formatSom } from "@/lib/pricing";
+import { uploadOrderFile } from "@/lib/orders.functions";
 
 const ADMIN_PASS = "00789";
 const HELPER_PASS = "78900";
@@ -273,6 +274,24 @@ function SitesTab() {
             <Input placeholder="Sarlavha" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
             <Input placeholder="URL (https://...)" value={edit.url} onChange={(e) => setEdit({ ...edit, url: e.target.value })} />
             <Input placeholder="Rasm URL" value={edit.image_url} onChange={(e) => setEdit({ ...edit, image_url: e.target.value })} />
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground hover:bg-muted/40">
+              <Plus className="h-4 w-4" /> Yoki kompyuterdan rasm yuklash
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                if (f.size > 5 * 1024 * 1024) { toast.error("Rasm 5MB dan oshmasin"); return; }
+                const t = toast.loading("Yuklanmoqda...");
+                try {
+                  const buf = new Uint8Array(await f.arrayBuffer());
+                  let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+                  const { url } = await uploadOrderFile({ data: { name: f.name, type: f.type, base64: btoa(bin) } });
+                  setEdit((cur) => (cur ? { ...cur, image_url: url } : cur));
+                  toast.success("Rasm yuklandi", { id: t });
+                } catch (err) { toast.error((err as Error).message, { id: t }); }
+                e.target.value = "";
+              }} />
+            </label>
+            {edit.image_url && <img src={edit.image_url} alt="" className="aspect-video w-full max-w-xs rounded-lg object-cover" />}
             <div className="flex gap-2">
               <Button onClick={save} className="bg-gradient-primary text-primary-foreground"><Save className="mr-1 h-4 w-4" /> Saqlash</Button>
               <Button variant="outline" onClick={() => setEdit(null)}>Bekor</Button>
