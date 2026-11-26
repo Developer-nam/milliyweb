@@ -31,14 +31,6 @@ export function SiteFooter() {
               >
                 <Send className="h-4 w-4" /> @odilovabdulquddus
               </a>
-              <a
-                href="https://t.me/shtursunov7"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <Send className="h-4 w-4" /> @shtursunov7
-              </a>
             </div>
           </div>
         </div>
